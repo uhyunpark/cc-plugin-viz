@@ -1,0 +1,8 @@
+{
+  "name": "cc-plugin-viz",
+  "description": "Visual dashboard for managing Claude Code plugins across scopes",
+  "author": {
+    "name": "uhyun"
+  },
+  "skills": "./skills/"
+}
