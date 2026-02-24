@@ -19,8 +19,11 @@ export const api = {
   togglePlugin: (id, enabled) => request(`/api/plugins/${encodeURIComponent(id)}/toggle`, {
     method: 'PATCH', body: JSON.stringify({ enabled }),
   }),
-  changeScope: (id, scope, projectPath) => request(`/api/plugins/${encodeURIComponent(id)}/scope`, {
-    method: 'PATCH', body: JSON.stringify({ scope, projectPath }),
+  addScope: (id, scope, projectPath) => request(`/api/plugins/${encodeURIComponent(id)}/add-scope`, {
+    method: 'POST', body: JSON.stringify({ scope, projectPath }),
+  }),
+  removeScope: (id, scope, projectPath) => request(`/api/plugins/${encodeURIComponent(id)}/scope`, {
+    method: 'DELETE', body: JSON.stringify({ scope, projectPath }),
   }),
   installPlugin: (name, marketplace, scope, projectPath) => request('/api/plugins/install', {
     method: 'POST', body: JSON.stringify({ name, marketplace, scope, projectPath }),

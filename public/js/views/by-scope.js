@@ -1,19 +1,26 @@
 import { pluginCard } from '../components/plugin-card.js';
 
-export function renderByScope(container, plugins, { filterScope, searchQuery, onToggle, onCardClick, onScopeChange, duplicates }) {
-  const filtered = plugins.filter(p => {
-    if (filterScope && p.scope !== filterScope) return false;
+export function renderByScope(container, plugins, { filterScope, searchQuery, onToggle, onCardClick, onAddScope, onRemoveScope, knownProjectPaths = [] }) {
+  // Filter by search
+  let filtered = plugins.filter(p => {
     if (searchQuery && !p.name.toLowerCase().includes(searchQuery) && !p.description.toLowerCase().includes(searchQuery)) return false;
     return true;
   });
 
-  // Group by scope, then by projectPath within project/local
+  // Filter by scope if specified
+  if (filterScope) {
+    filtered = filtered.filter(p => p.installations.some(i => i.scope === filterScope));
+  }
+
+  // Group by scope + projectPath
   const groups = {};
   for (const plugin of filtered) {
-    const key = plugin.scope === 'user' ? 'user'
-      : `${plugin.scope}:${plugin.projectPath || 'unknown'}`;
-    if (!groups[key]) groups[key] = { scope: plugin.scope, projectPath: plugin.projectPath, plugins: [] };
-    groups[key].plugins.push(plugin);
+    for (const inst of plugin.installations) {
+      if (filterScope && inst.scope !== filterScope) continue;
+      const key = inst.scope === 'user' ? 'user' : `${inst.scope}:${inst.projectPath || 'unknown'}`;
+      if (!groups[key]) groups[key] = { scope: inst.scope, projectPath: inst.projectPath, pluginIds: new Set() };
+      groups[key].pluginIds.add(plugin.id);
+    }
   }
 
   container.innerHTML = `
@@ -31,11 +38,13 @@ export function renderByScope(container, plugins, { filterScope, searchQuery, on
     return;
   }
 
+  // Build a lookup for quick access
+  const pluginMap = {};
+  for (const p of filtered) pluginMap[p.id] = p;
+
   for (const [key, group] of Object.entries(groups)) {
     const section = document.createElement('div');
     section.className = 'scope-group';
-    section.dataset.scope = group.scope;
-    section.dataset.projectPath = group.projectPath || '';
 
     const label = group.scope === 'user' ? 'User (Global)'
       : `${group.scope.charAt(0).toUpperCase() + group.scope.slice(1)}: ${group.projectPath}`;
@@ -43,7 +52,7 @@ export function renderByScope(container, plugins, { filterScope, searchQuery, on
     section.innerHTML = `
       <div class="scope-group-header">
         <h3>${label}</h3>
-        <span class="scope-group-count">${group.plugins.length}</span>
+        <span class="scope-group-count">${group.pluginIds.size}</span>
       </div>
       <div class="scope-drop-zone card-grid" data-scope="${group.scope}" data-project="${group.projectPath || ''}"></div>
     `;
@@ -67,23 +76,21 @@ export function renderByScope(container, plugins, { filterScope, searchQuery, on
       const targetScope = dropZone.dataset.scope;
       const targetProject = dropZone.dataset.project || null;
 
-      if (targetScope === 'project' || targetScope === 'local') {
-        if (targetProject) {
-          onScopeChange(pluginId, targetScope, targetProject);
-        } else {
-          onScopeChange(pluginId, targetScope, null);
-        }
-      } else {
-        onScopeChange(pluginId, targetScope);
+      if (onAddScope) {
+        onAddScope(pluginId, targetScope, targetProject);
       }
     });
 
-    for (const plugin of group.plugins) {
+    for (const pluginId of group.pluginIds) {
+      const plugin = pluginMap[pluginId];
+      if (!plugin) continue;
       dropZone.appendChild(pluginCard(plugin, {
         onToggle,
         onClick: onCardClick,
+        onAddScope,
+        onRemoveScope,
+        knownProjectPaths,
         draggable: true,
-        duplicateInfo: duplicates?.[plugin.id],
       }));
     }
 

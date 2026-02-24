@@ -5,7 +5,6 @@ import { renderByScope } from './views/by-scope.js';
 import { renderMarketplace } from './views/marketplace.js';
 import { renderBlocklist } from './views/blocklist.js';
 import { showPluginDetail } from './views/plugin-detail.js';
-import { detectDuplicates } from './components/duplicate-badge.js';
 
 let currentView = 'overview';
 let pluginsCache = [];
@@ -31,13 +30,28 @@ function handleCardClick(pluginId) {
   showPluginDetail(pluginId, { api, onRefresh: render });
 }
 
-async function handleScopeChange(pluginId, scope, projectPath) {
+async function handleAddScope(pluginId, scope, projectPath) {
   if ((scope === 'project' || scope === 'local') && !projectPath) {
     projectPath = prompt(`Enter project path for ${scope} scope:`);
     if (!projectPath) return;
   }
-  await api.changeScope(pluginId, scope, projectPath);
+  await api.addScope(pluginId, scope, projectPath);
   await render();
+}
+
+async function handleRemoveScope(pluginId, scope, projectPath) {
+  await api.removeScope(pluginId, scope, projectPath);
+  await render();
+}
+
+function getKnownProjectPaths() {
+  const paths = new Set();
+  for (const p of pluginsCache) {
+    for (const inst of p.installations) {
+      if (inst.projectPath) paths.add(inst.projectPath);
+    }
+  }
+  return [...paths];
 }
 
 async function render() {
@@ -47,7 +61,6 @@ async function render() {
   renderSidebar(sidebar, currentView, navigate);
 
   await loadPlugins();
-  const duplicates = detectDuplicates(pluginsCache);
 
   const scopeMap = {
     'scope-user': 'user',
@@ -55,12 +68,16 @@ async function render() {
     'scope-local': 'local',
   };
 
+  const knownProjectPaths = getKnownProjectPaths();
+
   if (currentView === 'overview') {
     renderOverview(viewEl, pluginsCache, {
       searchQuery,
       onToggle: handleToggle,
       onCardClick: handleCardClick,
-      duplicates,
+      onAddScope: handleAddScope,
+      onRemoveScope: handleRemoveScope,
+      knownProjectPaths,
     });
   } else if (currentView === 'by-scope' || scopeMap[currentView]) {
     renderByScope(viewEl, pluginsCache, {
@@ -68,8 +85,9 @@ async function render() {
       searchQuery,
       onToggle: handleToggle,
       onCardClick: handleCardClick,
-      onScopeChange: handleScopeChange,
-      duplicates,
+      onAddScope: handleAddScope,
+      onRemoveScope: handleRemoveScope,
+      knownProjectPaths,
     });
   } else if (currentView === 'marketplace') {
     await renderMarketplace(viewEl, { api, searchQuery });

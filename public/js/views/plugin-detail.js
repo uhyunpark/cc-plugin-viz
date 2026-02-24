@@ -1,10 +1,21 @@
 import { showModal } from '../components/modal.js';
-import { scopeBadge } from '../components/scope-badge.js';
 
 export async function showPluginDetail(pluginId, { api, onRefresh }) {
   const res = await api.getPlugin(pluginId);
   if (!res.ok) return;
   const plugin = res.data;
+
+  const installationsHtml = plugin.installations.map(inst => {
+    const label = inst.scope === 'user' ? 'User (Global)'
+      : `${inst.scope.charAt(0).toUpperCase() + inst.scope.slice(1)}: ${inst.projectPath}`;
+    const date = new Date(inst.installedAt).toLocaleDateString();
+    return `
+      <div class="detail-installation">
+        <span class="scope-chip scope-chip-${inst.scope}">${label}</span>
+        <span class="detail-install-date">installed ${date}</span>
+        <button class="btn-remove-scope" data-scope="${inst.scope}" data-project="${inst.projectPath || ''}">Remove</button>
+      </div>`;
+  }).join('');
 
   const el = document.createElement('div');
   el.className = 'plugin-detail';
@@ -24,18 +35,14 @@ export async function showPluginDetail(pluginId, { api, onRefresh }) {
         <span class="meta-value">${plugin.version}</span>
       </div>
       <div class="meta-item">
-        <span class="meta-label">Scope</span>
-        <span class="meta-value">${scopeBadge(plugin.scope)}</span>
+        <span class="meta-label">Install Path</span>
+        <span class="meta-value" style="font-size:0.75rem;word-break:break-all">${plugin.installPath}</span>
       </div>
-      ${plugin.projectPath ? `
-      <div class="meta-item">
-        <span class="meta-label">Project</span>
-        <span class="meta-value">${plugin.projectPath}</span>
-      </div>` : ''}
-      <div class="meta-item">
-        <span class="meta-label">Installed</span>
-        <span class="meta-value">${new Date(plugin.installedAt).toLocaleDateString()}</span>
-      </div>
+    </div>
+
+    <div class="detail-section">
+      <h3>Installed Scopes (${plugin.installations.length})</h3>
+      <div class="detail-installations">${installationsHtml}</div>
     </div>
 
     ${plugin.skills?.length ? `
@@ -58,21 +65,8 @@ export async function showPluginDetail(pluginId, { api, onRefresh }) {
       <pre class="code-block">${JSON.stringify(plugin.mcpServers, null, 2)}</pre>
     </div>` : ''}
 
-    <div class="detail-section">
-      <h3>Scope</h3>
-      <select id="detail-scope">
-        <option value="user" ${plugin.scope === 'user' ? 'selected' : ''}>User (Global)</option>
-        <option value="project" ${plugin.scope === 'project' ? 'selected' : ''}>Project</option>
-        <option value="local" ${plugin.scope === 'local' ? 'selected' : ''}>Local</option>
-      </select>
-      <input type="text" id="detail-project-path" placeholder="Project path"
-        value="${plugin.projectPath || ''}"
-        class="${plugin.scope === 'user' ? 'hidden' : ''}" />
-      <button class="btn-secondary" id="save-scope">Save Scope</button>
-    </div>
-
     <div class="detail-actions">
-      <button class="btn-danger" id="uninstall-btn">Uninstall</button>
+      <button class="btn-danger" id="uninstall-btn">Uninstall Completely</button>
     </div>
   `;
 
@@ -83,22 +77,28 @@ export async function showPluginDetail(pluginId, { api, onRefresh }) {
     await api.togglePlugin(pluginId, e.target.checked);
   });
 
-  // Scope change handler
-  el.querySelector('#detail-scope').addEventListener('change', (e) => {
-    el.querySelector('#detail-project-path').classList.toggle('hidden', e.target.value === 'user');
-  });
+  // Remove scope handlers
+  el.querySelectorAll('.btn-remove-scope').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const scope = btn.dataset.scope;
+      const projectPath = btn.dataset.project || null;
+      const label = scope === 'user' ? 'User (Global)' : `${scope}: ${projectPath}`;
 
-  el.querySelector('#save-scope').addEventListener('click', async () => {
-    const scope = el.querySelector('#detail-scope').value;
-    const projectPath = el.querySelector('#detail-project-path').value;
-    await api.changeScope(pluginId, scope, projectPath || undefined);
-    modal.close();
-    onRefresh();
+      if (plugin.installations.length === 1) {
+        if (!confirm(`This is the last scope. Removing will uninstall "${plugin.name}" completely. Continue?`)) return;
+      } else {
+        if (!confirm(`Remove "${plugin.name}" from ${label}?`)) return;
+      }
+
+      await api.removeScope(pluginId, scope, projectPath);
+      modal.close();
+      onRefresh();
+    });
   });
 
   // Uninstall handler
   el.querySelector('#uninstall-btn').addEventListener('click', async () => {
-    if (!confirm(`Uninstall ${plugin.name}?`)) return;
+    if (!confirm(`Completely uninstall ${plugin.name}? This removes it from all scopes.`)) return;
     await api.uninstallPlugin(pluginId);
     modal.close();
     onRefresh();

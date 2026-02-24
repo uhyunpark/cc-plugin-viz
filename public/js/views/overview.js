@@ -1,6 +1,6 @@
 import { pluginCard } from '../components/plugin-card.js';
 
-export function renderOverview(container, plugins, { searchQuery, onToggle, onCardClick, duplicates }) {
+export function renderOverview(container, plugins, { searchQuery, onToggle, onCardClick, onAddScope, onRemoveScope, knownProjectPaths = [] }) {
   const filtered = plugins.filter(p =>
     !searchQuery ||
     p.name.toLowerCase().includes(searchQuery) ||
@@ -27,7 +27,9 @@ export function renderOverview(container, plugins, { searchQuery, onToggle, onCa
     grid.appendChild(pluginCard(plugin, {
       onToggle,
       onClick: onCardClick,
-      duplicateInfo: duplicates?.[plugin.id],
+      onAddScope,
+      onRemoveScope,
+      knownProjectPaths,
     }));
   }
 }

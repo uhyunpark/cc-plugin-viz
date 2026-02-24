@@ -87,7 +87,7 @@ export async function createServer({ port = 3333, claudeDir } = {}) {
       const match = router.match(req.method, pathname);
       if (match) {
         try {
-          const body = ['POST', 'PATCH', 'PUT'].includes(req.method)
+          const body = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(req.method)
             ? await parseBody(req)
             : {};
           await match.handler({ req, res, params: match.params, body, sendJSON: (code, data) => sendJSON(res, code, data) });

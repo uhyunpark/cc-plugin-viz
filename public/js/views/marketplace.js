@@ -54,7 +54,9 @@ export async function renderMarketplace(container, { api, searchQuery }) {
       card.innerHTML = `
         <div class="card-header">
           <h3 class="card-name">${plugin.name}</h3>
-          ${plugin.installed ? '<span class="installed-badge">Installed</span>' : ''}
+          <div class="card-header-actions">
+            ${plugin.installed ? '<span class="installed-badge">Installed</span>' : ''}
+          </div>
         </div>
         <p class="card-description">${plugin.description || ''}</p>
         <div class="card-footer">
@@ -72,6 +74,7 @@ export async function renderMarketplace(container, { api, searchQuery }) {
         showInstallModal(btn.dataset.name, btn.dataset.marketplace, api);
       });
     });
+
   }
 
   // Tab click handlers

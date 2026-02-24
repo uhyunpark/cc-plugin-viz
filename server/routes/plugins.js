@@ -9,6 +9,12 @@ const execAsync = promisify(exec);
 
 const VALID_SCOPES = ['user', 'project', 'local'];
 
+// Strip CLAUDECODE env to allow nested claude CLI calls
+const cleanEnv = { ...process.env };
+delete cleanEnv.CLAUDECODE;
+const execOpts = { timeout: 120000, env: cleanEnv };
+
+
 export function registerPluginRoutes(router, paths) {
 
   router.get('/api/plugins', async ({ sendJSON }) => {
@@ -24,29 +30,29 @@ export function registerPluginRoutes(router, paths) {
     const plugins = [];
 
     for (const [id, installations] of Object.entries(registry.plugins)) {
-      for (const install of installations) {
-        // Read plugin.json for type info
-        const pluginMeta = await readJSON(join(install.installPath, '.claude-plugin', 'plugin.json'));
+      const install = installations[0];
+      const pluginMeta = await readJSON(join(install.installPath, '.claude-plugin', 'plugin.json'));
 
-        const [name, marketplace] = id.split('@');
-        plugins.push({
-          id,
-          name,
-          marketplace,
-          description: pluginMeta?.description || '',
-          version: install.version,
-          scope: install.scope,
-          projectPath: install.projectPath || null,
-          installPath: install.installPath,
-          installedAt: install.installedAt,
-          lastUpdated: install.lastUpdated,
-          enabled: enabledPlugins[id] === true,
-          hasSkills: !!pluginMeta?.skills,
-          hasHooks: !!pluginMeta?.hooks,
-          hasMcpServers: !!pluginMeta?.mcpServers,
-          hasLspServers: false,
-        });
-      }
+      const [name, marketplace] = id.split('@');
+      plugins.push({
+        id,
+        name,
+        marketplace,
+        description: pluginMeta?.description || '',
+        version: install.version,
+        installPath: install.installPath,
+        enabled: enabledPlugins[id] === true,
+        hasSkills: !!pluginMeta?.skills,
+        hasHooks: !!pluginMeta?.hooks,
+        hasMcpServers: !!pluginMeta?.mcpServers,
+        hasLspServers: false,
+        installations: installations.map(inst => ({
+          scope: inst.scope,
+          projectPath: inst.projectPath || null,
+          installedAt: inst.installedAt,
+          lastUpdated: inst.lastUpdated,
+        })),
+      });
     }
 
     sendJSON(200, { ok: true, data: plugins });
@@ -103,12 +109,14 @@ export function registerPluginRoutes(router, paths) {
         marketplace,
         description: pluginMeta?.description || '',
         version: install.version,
-        scope: install.scope,
-        projectPath: install.projectPath || null,
         installPath: install.installPath,
-        installedAt: install.installedAt,
-        lastUpdated: install.lastUpdated,
         enabled: enabledPlugins[id] === true,
+        installations: installations.map(inst => ({
+          scope: inst.scope,
+          projectPath: inst.projectPath || null,
+          installedAt: inst.installedAt,
+          lastUpdated: inst.lastUpdated,
+        })),
         skills,
         hooks,
         mcpServers,
@@ -132,7 +140,7 @@ export function registerPluginRoutes(router, paths) {
     sendJSON(200, { ok: true, data: { id: params.id, enabled: body.enabled } });
   });
 
-  router.patch('/api/plugins/:id/scope', async ({ params, body, sendJSON }) => {
+  router.post('/api/plugins/:id/add-scope', async ({ params, body, sendJSON }) => {
     if (!VALID_SCOPES.includes(body.scope)) {
       sendJSON(400, { ok: false, error: `Invalid scope. Must be one of: ${VALID_SCOPES.join(', ')}` });
       return;
@@ -144,21 +152,70 @@ export function registerPluginRoutes(router, paths) {
     }
 
     const registry = await readJSON(paths.installedPlugins);
-    if (!registry?.plugins?.[params.id]) {
+    const installations = registry?.plugins?.[params.id];
+    if (!installations) {
       sendJSON(404, { ok: false, error: 'Plugin not found' });
       return;
     }
 
-    const install = registry.plugins[params.id][0];
-    install.scope = body.scope;
-    if (body.scope === 'user') {
-      delete install.projectPath;
-    } else {
-      install.projectPath = body.projectPath;
+    // Check for duplicate scope+projectPath
+    const exists = installations.some(inst =>
+      inst.scope === body.scope &&
+      (body.scope === 'user' || inst.projectPath === body.projectPath)
+    );
+    if (exists) {
+      sendJSON(409, { ok: false, error: 'Plugin is already installed in this scope' });
+      return;
     }
 
+    // Clone metadata from first installation
+    const base = installations[0];
+    const newInstall = {
+      scope: body.scope,
+      installPath: base.installPath,
+      version: base.version,
+      installedAt: new Date().toISOString(),
+      lastUpdated: new Date().toISOString(),
+    };
+    if (base.gitCommitSha) newInstall.gitCommitSha = base.gitCommitSha;
+    if (body.scope !== 'user') newInstall.projectPath = body.projectPath;
+
+    installations.push(newInstall);
     await writeJSON(paths.installedPlugins, registry, paths.backupDir);
     sendJSON(200, { ok: true, data: { id: params.id, scope: body.scope, projectPath: body.projectPath || null } });
+  });
+
+  router.delete('/api/plugins/:id/scope', async ({ params, body, sendJSON }) => {
+    const registry = await readJSON(paths.installedPlugins);
+    const installations = registry?.plugins?.[params.id];
+    if (!installations) {
+      sendJSON(404, { ok: false, error: 'Plugin not found' });
+      return;
+    }
+
+    const idx = installations.findIndex(inst =>
+      inst.scope === body.scope &&
+      (body.scope === 'user' || inst.projectPath === body.projectPath)
+    );
+    if (idx === -1) {
+      sendJSON(404, { ok: false, error: 'Installation not found for this scope' });
+      return;
+    }
+
+    installations.splice(idx, 1);
+
+    if (installations.length === 0) {
+      // Last installation removed — fully uninstall
+      delete registry.plugins[params.id];
+      await writeJSON(paths.installedPlugins, registry, paths.backupDir);
+      try {
+        await execAsync(`claude plugin uninstall "${params.id}" --scope ${body.scope}`, execOpts);
+      } catch { /* best effort cleanup */ }
+    } else {
+      await writeJSON(paths.installedPlugins, registry, paths.backupDir);
+    }
+
+    sendJSON(200, { ok: true, data: { id: params.id, remaining: installations.length } });
   });
 
   router.post('/api/plugins/install', async ({ body, sendJSON }) => {
@@ -180,10 +237,8 @@ export function registerPluginRoutes(router, paths) {
     }
 
     try {
-      const scopeFlag = scope === 'user' ? '--global' : `--scope ${scope}`;
-      const projectFlag = projectPath ? `--project "${projectPath}"` : '';
-      const cmd = `claude plugins install "${name}@${marketplace}" ${scopeFlag} ${projectFlag}`.trim();
-      const { stdout, stderr } = await execAsync(cmd, { timeout: 60000 });
+      const cmd = `claude plugin install "${name}@${marketplace}" --scope ${scope}`;
+      const { stdout, stderr } = await execAsync(cmd, execOpts);
       sendJSON(200, { ok: true, data: { message: stdout || 'Installed successfully', stderr } });
     } catch (err) {
       sendJSON(500, { ok: false, error: `Install failed: ${err.message}` });
@@ -198,8 +253,8 @@ export function registerPluginRoutes(router, paths) {
     }
 
     try {
-      const cmd = `claude plugins uninstall "${params.id}"`;
-      const { stdout, stderr } = await execAsync(cmd, { timeout: 60000 });
+      const cmd = `claude plugin uninstall "${params.id}"`;
+      const { stdout, stderr } = await execAsync(cmd, execOpts);
       sendJSON(200, { ok: true, data: { message: stdout || 'Uninstalled successfully', stderr } });
     } catch (err) {
       sendJSON(500, { ok: false, error: `Uninstall failed: ${err.message}` });
