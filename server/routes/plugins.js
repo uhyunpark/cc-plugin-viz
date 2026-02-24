@@ -205,4 +205,32 @@ export function registerPluginRoutes(router, paths) {
       sendJSON(500, { ok: false, error: `Uninstall failed: ${err.message}` });
     }
   });
+
+  router.put('/api/plugins/:id/config', async ({ params, body, sendJSON }) => {
+    const registry = await readJSON(paths.installedPlugins);
+    if (!registry?.plugins?.[params.id]) {
+      sendJSON(404, { ok: false, error: 'Plugin not found' });
+      return;
+    }
+
+    const install = registry.plugins[params.id][0];
+    const configPath = join(install.installPath, '.claude-plugin', 'plugin.json');
+    const config = await readJSON(configPath);
+
+    if (!config) {
+      sendJSON(404, { ok: false, error: 'Plugin config not found' });
+      return;
+    }
+
+    // Merge provided fields (only allow safe fields)
+    const allowedFields = ['description'];
+    for (const field of allowedFields) {
+      if (body[field] !== undefined) {
+        config[field] = body[field];
+      }
+    }
+
+    await writeJSON(configPath, config, paths.backupDir);
+    sendJSON(200, { ok: true, data: config });
+  });
 }

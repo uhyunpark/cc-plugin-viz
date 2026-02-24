@@ -50,4 +50,30 @@ describe('Settings, blocklist, install-counts endpoints', () => {
     assert.equal(json.data.counts.length, 1);
     assert.equal(json.data.counts[0].unique_installs, 1000);
   });
+
+  it('POST /api/blocklist/:id adds to blocklist', async () => {
+    const res = await fetch(`${baseUrl}/api/blocklist/new-blocked@test-marketplace`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason: 'testing' }),
+    });
+    const json = await res.json();
+    assert.equal(json.ok, true);
+
+    const list = await fetch(`${baseUrl}/api/blocklist`);
+    const listJson = await list.json();
+    assert.ok(listJson.data.plugins.some(p => p.plugin === 'new-blocked@test-marketplace'));
+  });
+
+  it('DELETE /api/blocklist/:id removes from blocklist', async () => {
+    const res = await fetch(`${baseUrl}/api/blocklist/blocked@test-marketplace`, {
+      method: 'DELETE',
+    });
+    const json = await res.json();
+    assert.equal(json.ok, true);
+
+    const list = await fetch(`${baseUrl}/api/blocklist`);
+    const listJson = await list.json();
+    assert.ok(!listJson.data.plugins.some(p => p.plugin === 'blocked@test-marketplace'));
+  });
 });
