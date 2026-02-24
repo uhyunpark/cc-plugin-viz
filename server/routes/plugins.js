@@ -2,6 +2,10 @@ import { readJSON } from '../lib/reader.js';
 import { writeJSON } from '../lib/writer.js';
 import { join } from 'node:path';
 import { readdir } from 'node:fs/promises';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execAsync = promisify(exec);
 
 const VALID_SCOPES = ['user', 'project', 'local'];
 
@@ -155,5 +159,50 @@ export function registerPluginRoutes(router, paths) {
 
     await writeJSON(paths.installedPlugins, registry, paths.backupDir);
     sendJSON(200, { ok: true, data: { id: params.id, scope: body.scope, projectPath: body.projectPath || null } });
+  });
+
+  router.post('/api/plugins/install', async ({ body, sendJSON }) => {
+    const { name, marketplace, scope, projectPath } = body;
+
+    if (!name || !marketplace) {
+      sendJSON(400, { ok: false, error: 'name and marketplace are required' });
+      return;
+    }
+
+    if (!scope || !VALID_SCOPES.includes(scope)) {
+      sendJSON(400, { ok: false, error: `scope is required and must be one of: ${VALID_SCOPES.join(', ')}` });
+      return;
+    }
+
+    if ((scope === 'project' || scope === 'local') && !projectPath) {
+      sendJSON(400, { ok: false, error: 'projectPath is required for project/local scope' });
+      return;
+    }
+
+    try {
+      const scopeFlag = scope === 'user' ? '--global' : `--scope ${scope}`;
+      const projectFlag = projectPath ? `--project "${projectPath}"` : '';
+      const cmd = `claude plugins install "${name}@${marketplace}" ${scopeFlag} ${projectFlag}`.trim();
+      const { stdout, stderr } = await execAsync(cmd, { timeout: 60000 });
+      sendJSON(200, { ok: true, data: { message: stdout || 'Installed successfully', stderr } });
+    } catch (err) {
+      sendJSON(500, { ok: false, error: `Install failed: ${err.message}` });
+    }
+  });
+
+  router.delete('/api/plugins/:id', async ({ params, sendJSON }) => {
+    const registry = await readJSON(paths.installedPlugins);
+    if (!registry?.plugins?.[params.id]) {
+      sendJSON(404, { ok: false, error: 'Plugin not found' });
+      return;
+    }
+
+    try {
+      const cmd = `claude plugins uninstall "${params.id}"`;
+      const { stdout, stderr } = await execAsync(cmd, { timeout: 60000 });
+      sendJSON(200, { ok: true, data: { message: stdout || 'Uninstalled successfully', stderr } });
+    } catch (err) {
+      sendJSON(500, { ok: false, error: `Uninstall failed: ${err.message}` });
+    }
   });
 }

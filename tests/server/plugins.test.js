@@ -124,4 +124,22 @@ describe('GET /api/plugins', () => {
     });
     assert.equal(res.status, 400);
   });
+
+  it('POST /api/plugins/install rejects missing required fields', async () => {
+    const res = await fetch(`${baseUrl}/api/plugins/install`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'test-plugin' }),
+    });
+    const json = await res.json();
+    assert.equal(json.ok, false);
+    assert.equal(res.status, 400);
+  });
+
+  it('DELETE /api/plugins/:id rejects unknown plugin', async () => {
+    const res = await fetch(`${baseUrl}/api/plugins/unknown@nowhere`, {
+      method: 'DELETE',
+    });
+    assert.equal(res.status, 404);
+  });
 });
