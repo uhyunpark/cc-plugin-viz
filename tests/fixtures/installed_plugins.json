@@ -1,0 +1,24 @@
+{
+  "version": 2,
+  "plugins": {
+    "test-plugin@test-marketplace": [
+      {
+        "scope": "user",
+        "installPath": "/tmp/test-cache/test-marketplace/test-plugin/1.0.0",
+        "version": "1.0.0",
+        "installedAt": "2026-01-01T00:00:00.000Z",
+        "lastUpdated": "2026-01-01T00:00:00.000Z"
+      }
+    ],
+    "scoped-plugin@test-marketplace": [
+      {
+        "scope": "project",
+        "projectPath": "/tmp/test-project",
+        "installPath": "/tmp/test-cache/test-marketplace/scoped-plugin/2.0.0",
+        "version": "2.0.0",
+        "installedAt": "2026-01-02T00:00:00.000Z",
+        "lastUpdated": "2026-01-02T00:00:00.000Z"
+      }
+    ]
+  }
+}

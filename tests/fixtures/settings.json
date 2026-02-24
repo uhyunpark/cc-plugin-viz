@@ -1,0 +1,6 @@
+{
+  "enabledPlugins": {
+    "test-plugin@test-marketplace": true,
+    "scoped-plugin@test-marketplace": false
+  }
+}
