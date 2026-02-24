@@ -1,0 +1,21 @@
+{
+  "name": "test-marketplace",
+  "description": "Test marketplace",
+  "owner": { "name": "Test" },
+  "plugins": [
+    {
+      "name": "test-plugin",
+      "description": "A test plugin",
+      "version": "1.0.0",
+      "source": "./plugins/test-plugin",
+      "category": "development"
+    },
+    {
+      "name": "another-plugin",
+      "description": "Another plugin",
+      "version": "2.0.0",
+      "source": "./plugins/another-plugin",
+      "category": "productivity"
+    }
+  ]
+}
