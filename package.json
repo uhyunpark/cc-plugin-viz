@@ -2,8 +2,12 @@
   "name": "cc-plugin-viz",
   "version": "0.1.0",
   "description": "Visual dashboard for managing Claude Code plugins",
-  "private": true,
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uhyun/cc-plugin-viz"
+  },
+  "license": "MIT",
   "scripts": {
     "start": "node server/index.js",
     "test": "node --test tests/**/*.test.js"
