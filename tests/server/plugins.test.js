@@ -66,4 +66,62 @@ describe('GET /api/plugins', () => {
     assert.equal(json.ok, false);
     assert.equal(res.status, 404);
   });
+
+  it('PATCH /api/plugins/:id/toggle toggles enabled state', async () => {
+    const res = await fetch(`${baseUrl}/api/plugins/test-plugin@test-marketplace/toggle`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: false }),
+    });
+    const json = await res.json();
+    assert.equal(json.ok, true);
+
+    // Verify settings file was updated
+    const settings = await fetch(`${baseUrl}/api/settings`);
+    const settingsJson = await settings.json();
+    assert.equal(settingsJson.data.enabledPlugins['test-plugin@test-marketplace'], false);
+  });
+
+  it('PATCH /api/plugins/:id/toggle returns 404 for unknown plugin', async () => {
+    const res = await fetch(`${baseUrl}/api/plugins/unknown@nowhere/toggle`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled: true }),
+    });
+    assert.equal(res.status, 404);
+  });
+
+  it('PATCH /api/plugins/:id/scope changes scope', async () => {
+    const res = await fetch(`${baseUrl}/api/plugins/test-plugin@test-marketplace/scope`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'project', projectPath: '/tmp/my-project' }),
+    });
+    const json = await res.json();
+    assert.equal(json.ok, true);
+
+    const plugins = await fetch(`${baseUrl}/api/plugins`);
+    const pluginsJson = await plugins.json();
+    const plugin = pluginsJson.data.find(p => p.id === 'test-plugin@test-marketplace');
+    assert.equal(plugin.scope, 'project');
+    assert.equal(plugin.projectPath, '/tmp/my-project');
+  });
+
+  it('PATCH /api/plugins/:id/scope rejects invalid scope', async () => {
+    const res = await fetch(`${baseUrl}/api/plugins/test-plugin@test-marketplace/scope`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'invalid' }),
+    });
+    assert.equal(res.status, 400);
+  });
+
+  it('PATCH /api/plugins/:id/scope requires projectPath for project scope', async () => {
+    const res = await fetch(`${baseUrl}/api/plugins/test-plugin@test-marketplace/scope`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ scope: 'project' }),
+    });
+    assert.equal(res.status, 400);
+  });
 });
