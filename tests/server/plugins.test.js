@@ -51,4 +51,19 @@ describe('GET /api/plugins', () => {
     assert.equal(scoped.scope, 'project');
     assert.equal(scoped.projectPath, '/tmp/test-project');
   });
+
+  it('GET /api/plugins/:id returns plugin detail by id', async () => {
+    const res = await fetch(`${baseUrl}/api/plugins/test-plugin@test-marketplace`);
+    const json = await res.json();
+    assert.equal(json.ok, true);
+    assert.equal(json.data.id, 'test-plugin@test-marketplace');
+    assert.equal(json.data.version, '1.0.0');
+  });
+
+  it('GET /api/plugins/:id returns 404 for unknown plugin', async () => {
+    const res = await fetch(`${baseUrl}/api/plugins/nonexistent@nowhere`);
+    const json = await res.json();
+    assert.equal(json.ok, false);
+    assert.equal(res.status, 404);
+  });
 });
