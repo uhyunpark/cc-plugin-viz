@@ -5,7 +5,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://github.com/uhyun/cc-plugin-viz"
+    "url": "https://github.com/uhyunpark/cc-plugin-viz"
   },
   "license": "MIT",
   "scripts": {

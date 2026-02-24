@@ -21,13 +21,13 @@ Visual dashboard for managing Claude Code plugins across scopes (user, project, 
 ### From GitHub
 
 ```bash
-claude plugins install --from-github uhyun/cc-plugin-viz
+claude plugins install --from-github uhyunpark/cc-plugin-viz
 ```
 
 ### From local clone
 
 ```bash
-git clone https://github.com/uhyun/cc-plugin-viz.git
+git clone https://github.com/uhyunpark/cc-plugin-viz.git
 claude plugins install ./cc-plugin-viz
 ```
 
@@ -56,7 +56,7 @@ PORT=3334 node <plugin-root>/server/index.js
 You can also run the dashboard standalone:
 
 ```bash
-git clone https://github.com/uhyun/cc-plugin-viz.git
+git clone https://github.com/uhyunpark/cc-plugin-viz.git
 cd cc-plugin-viz
 node server/index.js
 ```
@@ -64,7 +64,7 @@ node server/index.js
 ## Development
 
 ```bash
-git clone https://github.com/uhyun/cc-plugin-viz.git
+git clone https://github.com/uhyunpark/cc-plugin-viz.git
 cd cc-plugin-viz
 
 # Run tests
@@ -133,7 +133,7 @@ To make this plugin discoverable in a Claude Code marketplace, add it to your ma
       "name": "cc-plugin-viz",
       "description": "Visual dashboard for managing Claude Code plugins",
       "version": "0.1.0",
-      "source": "https://github.com/uhyun/cc-plugin-viz",
+      "source": "https://github.com/uhyunpark/cc-plugin-viz",
       "category": "development"
     }
   ]
