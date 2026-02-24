@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "fetchedAt": "2026-01-01T00:00:00.000Z",
+  "counts": [
+    { "plugin": "test-plugin@test-marketplace", "unique_installs": 1000 }
+  ]
+}

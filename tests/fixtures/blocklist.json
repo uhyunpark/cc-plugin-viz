@@ -1,0 +1,6 @@
+{
+  "fetchedAt": "2026-01-01T00:00:00.000Z",
+  "plugins": [
+    { "plugin": "blocked@test-marketplace", "added_at": "2026-01-01T00:00:00.000Z", "reason": "test", "text": "Test block" }
+  ]
+}
