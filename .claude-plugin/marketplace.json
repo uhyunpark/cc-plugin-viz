@@ -1,0 +1,28 @@
+{
+  "name": "uhyunpark-plugins",
+  "description": "Claude Code plugins by uhyun",
+  "owner": {
+    "name": "uhyun",
+    "email": ""
+  },
+  "plugins": [
+    {
+      "name": "cc-plugin-viz",
+      "description": "Visual dashboard for managing Claude Code plugins across scopes",
+      "version": "0.1.0",
+      "author": {
+        "name": "uhyun"
+      },
+      "source": "./",
+      "category": "development",
+      "homepage": "https://github.com/uhyunpark/cc-plugin-viz",
+      "tags": [
+        "plugins",
+        "dashboard",
+        "visualization",
+        "management"
+      ]
+    }
+  ],
+  "version": "0.1.0"
+}

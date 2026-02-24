@@ -18,17 +18,24 @@ Visual dashboard for managing Claude Code plugins across scopes (user, project, 
 
 ## Install
 
+### From Marketplace (recommended)
+
+```
+/plugin marketplace add uhyunpark/cc-plugin-viz
+/plugin install cc-plugin-viz@uhyunpark-plugins
+```
+
 ### From GitHub
 
-```bash
-claude plugins install --from-github uhyunpark/cc-plugin-viz
+```
+/plugin install --from-github uhyunpark/cc-plugin-viz
 ```
 
 ### From local clone
 
 ```bash
 git clone https://github.com/uhyunpark/cc-plugin-viz.git
-claude plugins install ./cc-plugin-viz
+/plugin install ./cc-plugin-viz
 ```
 
 > **Scope options:** Add `--scope project` to install for a specific project only, or omit for global (user) scope.
@@ -122,22 +129,20 @@ tests/              # Node.js test runner (node:test)
 | DELETE | `/api/blocklist/:id` | Remove from blocklist |
 | GET | `/api/install-counts` | Plugin install counts |
 
-## Marketplace Registration
+## Marketplace
 
-To make this plugin discoverable in a Claude Code marketplace, add it to your marketplace's `marketplace.json`:
+This repo doubles as its own Claude Code marketplace. The marketplace definition lives at `.claude-plugin/marketplace.json`.
 
-```json
-{
-  "plugins": [
-    {
-      "name": "cc-plugin-viz",
-      "description": "Visual dashboard for managing Claude Code plugins",
-      "version": "0.1.0",
-      "source": "https://github.com/uhyunpark/cc-plugin-viz",
-      "category": "development"
-    }
-  ]
-}
+Users add it with:
+
+```
+/plugin marketplace add uhyunpark/cc-plugin-viz
+```
+
+Then install via:
+
+```
+/plugin install cc-plugin-viz@uhyunpark-plugins
 ```
 
 ## License
