@@ -12,11 +12,19 @@
     <main id="content">
       <header id="header">
         <input type="search" id="search" placeholder="Search plugins..." />
+        <button id="reload-plugins-btn" class="btn-reload" title="Reload Plugins">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 1v5h5"/>
+            <path d="M3.51 10a5.5 5.5 0 1 0 1.12-5.5L1 8"/>
+          </svg>
+          Reload Plugins
+        </button>
       </header>
       <div id="view"></div>
     </main>
   </div>
   <div id="modal-overlay" class="hidden"></div>
+  <div id="toast-container"></div>
   <script type="module" src="/js/app.js"></script>
 </body>
 </html>

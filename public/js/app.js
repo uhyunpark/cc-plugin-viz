@@ -96,6 +96,21 @@ async function render() {
   }
 }
 
+// Toast helper
+function showToast(message, duration = 5000) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.innerHTML = message;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), duration);
+}
+
+// Reload plugins reminder
+document.getElementById('reload-plugins-btn').addEventListener('click', () => {
+  showToast('Run <code>/reload-plugins</code> in your Claude Code session to pick up changes');
+});
+
 // Search handler
 document.getElementById('search').addEventListener('input', (e) => {
   searchQuery = e.target.value.toLowerCase();
