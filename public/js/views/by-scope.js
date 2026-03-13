@@ -1,6 +1,6 @@
 import { pluginCard } from '../components/plugin-card.js';
 
-export function renderByScope(container, plugins, { filterScope, searchQuery, onToggle, onCardClick, onAddScope, onRemoveScope, knownProjectPaths = [] }) {
+export function renderByScope(container, plugins, { filterScope, searchQuery, onToggle, onCardClick, onAddScope, onRemoveScope, onUninstall, knownProjectPaths = [] }) {
   // Filter by search
   let filtered = plugins.filter(p => {
     if (searchQuery && !p.name.toLowerCase().includes(searchQuery) && !p.description.toLowerCase().includes(searchQuery)) return false;
@@ -89,6 +89,7 @@ export function renderByScope(container, plugins, { filterScope, searchQuery, on
         onClick: onCardClick,
         onAddScope,
         onRemoveScope,
+        onUninstall,
         knownProjectPaths,
         draggable: true,
       }));

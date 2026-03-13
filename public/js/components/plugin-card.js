@@ -30,7 +30,7 @@ function buildAddScopeItems(plugin, knownProjectPaths) {
   return items;
 }
 
-export function pluginCard(plugin, { onToggle, onClick, onAddScope, onRemoveScope, knownProjectPaths = [], draggable = false } = {}) {
+export function pluginCard(plugin, { onToggle, onClick, onAddScope, onRemoveScope, onUninstall, knownProjectPaths = [], draggable = false } = {}) {
   const card = document.createElement('div');
   card.className = `plugin-card ${plugin.enabled ? '' : 'disabled'}`;
   card.dataset.pluginId = plugin.id;
@@ -64,10 +64,13 @@ export function pluginCard(plugin, { onToggle, onClick, onAddScope, onRemoveScop
         <h3 class="card-name">${plugin.name}</h3>
         <span class="card-marketplace">@${plugin.marketplace}</span>
       </div>
-      <label class="toggle-switch" title="${plugin.enabled ? 'Enabled' : 'Disabled'}">
-        <input type="checkbox" ${plugin.enabled ? 'checked' : ''} />
-        <span class="toggle-slider"></span>
-      </label>
+      <div class="card-actions">
+        <label class="toggle-switch" title="${plugin.enabled ? 'Enabled' : 'Disabled'}">
+          <input type="checkbox" ${plugin.enabled ? 'checked' : ''} />
+          <span class="toggle-slider"></span>
+        </label>
+        <button class="delete-btn" title="Uninstall plugin">&#128465;</button>
+      </div>
     </div>
     <p class="card-description">${plugin.description || 'No description'}</p>
     <div class="card-scopes">
@@ -164,9 +167,17 @@ export function pluginCard(plugin, { onToggle, onClick, onAddScope, onRemoveScop
     });
   }
 
+  // Delete button handler
+  const deleteBtn = card.querySelector('.delete-btn');
+  deleteBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!confirm(`Uninstall "${plugin.name}" from all scopes? This cannot be undone.`)) return;
+    if (onUninstall) onUninstall(plugin.id);
+  });
+
   // Click handler (opens detail modal)
   card.addEventListener('click', (e) => {
-    if (e.target.closest('.toggle-switch') || e.target.closest('.chip-remove') || e.target.closest('.scope-add-btn') || e.target.closest('.scope-add-dropdown')) return;
+    if (e.target.closest('.toggle-switch') || e.target.closest('.chip-remove') || e.target.closest('.scope-add-btn') || e.target.closest('.scope-add-dropdown') || e.target.closest('.delete-btn')) return;
     if (onClick) onClick(plugin.id);
   });
 

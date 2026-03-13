@@ -44,6 +44,11 @@ async function handleRemoveScope(pluginId, scope, projectPath) {
   await render();
 }
 
+async function handleUninstall(pluginId) {
+  await api.uninstallPlugin(pluginId);
+  await render();
+}
+
 function getKnownProjectPaths() {
   const paths = new Set();
   for (const p of pluginsCache) {
@@ -77,6 +82,7 @@ async function render() {
       onCardClick: handleCardClick,
       onAddScope: handleAddScope,
       onRemoveScope: handleRemoveScope,
+      onUninstall: handleUninstall,
       knownProjectPaths,
     });
   } else if (currentView === 'by-scope' || scopeMap[currentView]) {
@@ -87,6 +93,7 @@ async function render() {
       onCardClick: handleCardClick,
       onAddScope: handleAddScope,
       onRemoveScope: handleRemoveScope,
+      onUninstall: handleUninstall,
       knownProjectPaths,
     });
   } else if (currentView === 'marketplace') {
