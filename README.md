@@ -7,7 +7,8 @@ Visual dashboard for managing Claude Code plugins across scopes (user, project, 
 - **Overview** — see all installed plugins at a glance with search and filtering
 - **By Scope** — drag-and-drop plugins between user/project/local scopes
 - **Marketplace** — browse registered marketplaces, see install counts, one-click install
-- **Plugin Detail** — view skills, hooks, MCP servers; toggle enable/disable; change scope; uninstall
+- **Plugin Detail** — view skills, agents, hooks, MCP/LSP servers, monitors, and bin executables with readable summaries; toggle enable/disable; change scope; uninstall
+- **Capability auto-discovery** — detects all plugin components by Claude Code's directory conventions (`skills/`, legacy `commands/`, `agents/`, `hooks/hooks.json`, `.mcp.json`, `.lsp.json`, `monitors/monitors.json`, `bin/`) as well as explicit `plugin.json` declarations. Legacy `commands/` are unified into Skills, matching Claude Code (a `commands/x.md` and a `skills/x/SKILL.md` both create `/x`).
 - **Blocklist** — view and manage blocked plugins
 - **Duplicate Detection** — warns when the same plugin is installed from multiple sources
 

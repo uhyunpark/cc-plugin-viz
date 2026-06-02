@@ -46,16 +46,25 @@ export function pluginCard(plugin, { onToggle, onClick, onAddScope, onRemoveScop
     });
   }
 
+  const counts = plugin.counts || {};
+  const badge = (label, n) =>
+    `<span class="type-badge">${label}${n ? ` ${n}` : ''}</span>`;
+
   const typeBadges = [];
-  if (plugin.hasSkills) typeBadges.push('<span class="type-badge">Skills</span>');
-  if (plugin.hasMcpServers) typeBadges.push('<span class="type-badge">MCP</span>');
-  if (plugin.hasHooks) typeBadges.push('<span class="type-badge">Hooks</span>');
-  if (plugin.hasLspServers) typeBadges.push('<span class="type-badge">LSP</span>');
+  // Skills include legacy commands/ — both invoke as /name in Claude Code.
+  if (plugin.hasSkills) typeBadges.push(badge('Skills', counts.skills));
+  if (plugin.hasAgents) typeBadges.push(badge('Agents', counts.agents));
+  if (plugin.hasMcpServers) typeBadges.push(badge('MCP'));
+  if (plugin.hasHooks) typeBadges.push(badge('Hooks'));
+  if (plugin.hasLspServers) typeBadges.push(badge('LSP'));
+  if (plugin.hasMonitors) typeBadges.push(badge('Monitors'));
+  if (plugin.hasBin) typeBadges.push(badge('Bin', counts.bin));
 
   // Build scope chips HTML
   const scopeChips = plugin.installations.map((inst, idx) => {
     const label = scopeChipLabel(inst);
-    return `<span class="scope-chip scope-chip-${inst.scope}" data-idx="${idx}" title="${inst.projectPath || 'Global'}">${label}<button class="chip-remove" data-idx="${idx}" title="Remove from this scope">&times;</button></span>`;
+    const where = inst.scope === 'user' ? 'all projects (global)' : inst.projectPath;
+    return `<span class="scope-chip scope-chip-${inst.scope}" data-idx="${idx}" title="Registered for ${where} — install location, not the on/off state">${label}<button class="chip-remove" data-idx="${idx}" title="Remove from this scope">&times;</button></span>`;
   }).join('');
 
   card.innerHTML = `
@@ -65,7 +74,7 @@ export function pluginCard(plugin, { onToggle, onClick, onAddScope, onRemoveScop
         <span class="card-marketplace">@${plugin.marketplace}</span>
       </div>
       <div class="card-actions">
-        <label class="toggle-switch" title="${plugin.enabled ? 'Enabled' : 'Disabled'}">
+        <label class="toggle-switch" title="${plugin.enabled ? 'Enabled' : 'Disabled'} at user (global) level — click to toggle">
           <input type="checkbox" ${plugin.enabled ? 'checked' : ''} />
           <span class="toggle-slider"></span>
         </label>

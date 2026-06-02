@@ -1,0 +1,1 @@
+{"monitors":{"watcher":{"command":"node watch.js"},"poller":{"command":"node poll.js"}}}

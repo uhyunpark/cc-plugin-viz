@@ -1,0 +1,1 @@
+{"name":"explicit-plugin","skills":"./my-skills/","hooks":"./config/hooks.json","mcpServers":"./config/mcp.json","lspServers":{"rust-analyzer":{"command":"rust-analyzer"}}}

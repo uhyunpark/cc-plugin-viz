@@ -1,5 +1,61 @@
 import { showModal } from '../components/modal.js';
 
+// Config blobs are stored either wrapped ({ hooks: {...} }) or inline ({...}).
+// Unwrap to the inner map regardless of shape.
+function unwrap(config, key) {
+  if (!config || typeof config !== 'object') return null;
+  if (config[key] && typeof config[key] === 'object') return config[key];
+  return config;
+}
+
+function chips(items) {
+  return items.map(t => `<span class="summary-chip">${t}</span>`).join('');
+}
+
+// "PreToolUse, Stop" (the hook events this plugin handles)
+function summarizeHooks(hooks) {
+  const map = unwrap(hooks, 'hooks');
+  const events = map ? Object.keys(map) : [];
+  return events.length ? chips(events) : '<span class="summary-empty">configured</span>';
+}
+
+// server names: "atlassian", "github"
+function summarizeMcp(mcp) {
+  const map = unwrap(mcp, 'mcpServers');
+  const names = map ? Object.keys(map) : [];
+  return names.length ? chips(names) : '<span class="summary-empty">configured</span>';
+}
+
+// "gopls (.go)" — language server name + the extensions it handles
+function summarizeLsp(lsp) {
+  const map = unwrap(lsp, 'lspServers');
+  if (!map) return '<span class="summary-empty">configured</span>';
+  const parts = Object.entries(map).map(([name, cfg]) => {
+    const exts = cfg && cfg.extensionToLanguage ? Object.keys(cfg.extensionToLanguage) : [];
+    return exts.length ? `${name} (${exts.join(', ')})` : name;
+  });
+  return parts.length ? chips(parts) : '<span class="summary-empty">configured</span>';
+}
+
+// background process names defined in monitors/monitors.json
+function summarizeMonitors(monitors) {
+  const map = unwrap(monitors, 'monitors');
+  const names = map ? Object.keys(map) : [];
+  return names.length ? chips(names) : '<span class="summary-empty">configured</span>';
+}
+
+function configSection(title, summaryHtml, raw) {
+  return `
+    <div class="detail-section">
+      <h3>${title}</h3>
+      <div class="summary-row">${summaryHtml}</div>
+      <details class="raw-config">
+        <summary>Raw config</summary>
+        <pre class="code-block">${JSON.stringify(raw, null, 2)}</pre>
+      </details>
+    </div>`;
+}
+
 export async function showPluginDetail(pluginId, { api, onRefresh }) {
   const res = await api.getPlugin(pluginId);
   if (!res.ok) return;
@@ -22,7 +78,8 @@ export async function showPluginDetail(pluginId, { api, onRefresh }) {
   el.innerHTML = `
     <div class="detail-header">
       <h2>${plugin.name} <span class="detail-marketplace">@${plugin.marketplace}</span></h2>
-      <label class="toggle-switch">
+      <label class="toggle-switch toggle-with-label" title="This switch controls the user (global) setting only">
+        <span class="toggle-caption">${plugin.enabled ? 'Enabled' : 'Disabled'}<small>user / global</small></span>
         <input type="checkbox" id="detail-toggle" ${plugin.enabled ? 'checked' : ''} />
         <span class="toggle-slider"></span>
       </label>
@@ -42,27 +99,42 @@ export async function showPluginDetail(pluginId, { api, onRefresh }) {
 
     <div class="detail-section">
       <h3>Installed Scopes (${plugin.installations.length})</h3>
+      <p class="section-hint">Where the plugin is <strong>registered</strong>. This is separate from the
+      on/off switch above, which only toggles the <strong>user (global)</strong> setting.
+      A <em>project</em> scope is committed to that repo's <code>.claude/settings.json</code> so teammates get it too.</p>
       <div class="detail-installations">${installationsHtml}</div>
     </div>
 
     ${plugin.skills?.length ? `
     <div class="detail-section">
-      <h3>Skills (${plugin.skills.length})</h3>
+      <h3>Skills (${plugin.skills.length}) <span class="section-hint">invoke as <code>/${plugin.name}:name</code></span></h3>
       <ul class="skills-list">
-        ${plugin.skills.map(s => `<li>${s.name}</li>`).join('')}
+        ${plugin.skills.map(s => `<li>/${s.name}${s.format === 'command' ? ' <span class="legacy-tag">legacy command</span>' : ''}</li>`).join('')}
       </ul>
     </div>` : ''}
 
-    ${plugin.hooks ? `
+    ${plugin.agents?.length ? `
     <div class="detail-section">
-      <h3>Hooks</h3>
-      <pre class="code-block">${JSON.stringify(plugin.hooks, null, 2)}</pre>
+      <h3>Agents (${plugin.agents.length})</h3>
+      <ul class="skills-list">
+        ${plugin.agents.map(a => `<li>${a.name}</li>`).join('')}
+      </ul>
     </div>` : ''}
 
-    ${plugin.mcpServers ? `
+    ${plugin.hooks ? configSection('Hooks', summarizeHooks(plugin.hooks), plugin.hooks) : ''}
+
+    ${plugin.mcpServers ? configSection('MCP Servers', summarizeMcp(plugin.mcpServers), plugin.mcpServers) : ''}
+
+    ${plugin.lspServers ? configSection('LSP Servers', summarizeLsp(plugin.lspServers), plugin.lspServers) : ''}
+
+    ${plugin.monitors ? configSection('Monitors', summarizeMonitors(plugin.monitors), plugin.monitors) : ''}
+
+    ${plugin.bin?.length ? `
     <div class="detail-section">
-      <h3>MCP Servers</h3>
-      <pre class="code-block">${JSON.stringify(plugin.mcpServers, null, 2)}</pre>
+      <h3>Bin (${plugin.bin.length}) <span class="section-hint">executables added to the Bash <code>PATH</code></span></h3>
+      <ul class="skills-list">
+        ${plugin.bin.map(b => `<li>${b.name}</li>`).join('')}
+      </ul>
     </div>` : ''}
 
     <div class="detail-actions">
@@ -72,8 +144,10 @@ export async function showPluginDetail(pluginId, { api, onRefresh }) {
 
   const modal = showModal(el);
 
-  // Toggle handler
+  // Toggle handler (controls the user/global setting only)
+  const caption = el.querySelector('.toggle-caption');
   el.querySelector('#detail-toggle').addEventListener('change', async (e) => {
+    if (caption) caption.innerHTML = `${e.target.checked ? 'Enabled' : 'Disabled'}<small>user / global</small>`;
     await api.togglePlugin(pluginId, e.target.checked);
   });
 

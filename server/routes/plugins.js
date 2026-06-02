@@ -1,7 +1,7 @@
 import { readJSON } from '../lib/reader.js';
 import { writeJSON } from '../lib/writer.js';
+import { detectCapabilities } from '../lib/capabilities.js';
 import { join } from 'node:path';
-import { readdir } from 'node:fs/promises';
 import { exec } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -32,6 +32,7 @@ export function registerPluginRoutes(router, paths) {
     for (const [id, installations] of Object.entries(registry.plugins)) {
       const install = installations[0];
       const pluginMeta = await readJSON(join(install.installPath, '.claude-plugin', 'plugin.json'));
+      const caps = await detectCapabilities(install.installPath, pluginMeta);
 
       const [name, marketplace] = id.split('@');
       plugins.push({
@@ -42,10 +43,18 @@ export function registerPluginRoutes(router, paths) {
         version: install.version,
         installPath: install.installPath,
         enabled: enabledPlugins[id] === true,
-        hasSkills: !!pluginMeta?.skills,
-        hasHooks: !!pluginMeta?.hooks,
-        hasMcpServers: !!pluginMeta?.mcpServers,
-        hasLspServers: false,
+        hasSkills: caps.skills.length > 0,
+        hasAgents: caps.agents.length > 0,
+        hasHooks: !!caps.hooks,
+        hasMcpServers: !!caps.mcpServers,
+        hasLspServers: !!caps.lspServers,
+        hasMonitors: !!caps.monitors,
+        hasBin: caps.bin.length > 0,
+        counts: {
+          skills: caps.skills.length,
+          agents: caps.agents.length,
+          bin: caps.bin.length,
+        },
         installations: installations.map(inst => ({
           scope: inst.scope,
           projectPath: inst.projectPath || null,
@@ -72,32 +81,8 @@ export function registerPluginRoutes(router, paths) {
 
     const install = installations[0];
     const pluginMeta = await readJSON(join(install.installPath, '.claude-plugin', 'plugin.json'));
-
-    // Read skills if available
-    let skills = [];
-    if (pluginMeta?.skills) {
-      const skillsDir = join(install.installPath, pluginMeta.skills);
-      try {
-        const entries = await readdir(skillsDir, { withFileTypes: true });
-        for (const entry of entries) {
-          if (entry.isDirectory()) {
-            skills.push({ name: entry.name, path: join(skillsDir, entry.name) });
-          }
-        }
-      } catch { /* no skills dir */ }
-    }
-
-    // Read hooks if available
-    let hooks = null;
-    if (pluginMeta?.hooks) {
-      hooks = await readJSON(join(install.installPath, pluginMeta.hooks));
-    }
-
-    // Read MCP servers if available
-    let mcpServers = null;
-    if (pluginMeta?.mcpServers) {
-      mcpServers = await readJSON(join(install.installPath, pluginMeta.mcpServers));
-    }
+    const { skills, agents, hooks, mcpServers, lspServers, monitors, bin } =
+      await detectCapabilities(install.installPath, pluginMeta);
 
     const [name, marketplace] = id.split('@');
 
@@ -118,8 +103,12 @@ export function registerPluginRoutes(router, paths) {
           lastUpdated: inst.lastUpdated,
         })),
         skills,
+        agents,
         hooks,
         mcpServers,
+        lspServers,
+        monitors,
+        bin,
         pluginMeta,
       },
     });
